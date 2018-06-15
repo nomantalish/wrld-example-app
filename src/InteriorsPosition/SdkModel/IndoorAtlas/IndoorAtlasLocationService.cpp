@@ -1,9 +1,9 @@
 // Copyright eeGeo Ltd (2012-2016), All Rights Reserved
 
 #include "IndoorAtlasLocationService.h"
-#include "InteriorHeightHelpers.h"
 #include "EnvironmentFlatteningService.h"
 #include "InteriorInteractionModel.h"
+#include "IndoorAtlasLocationServiceImpl.h"
 
 namespace ExampleApp
 {
@@ -13,95 +13,133 @@ namespace ExampleApp
         {
             namespace IndoorAtlas
             {
-            IndoorAtlasLocationService::IndoorAtlasLocationService(Eegeo::Location::ILocationService& defaultLocationService,
-                                                                   const Eegeo::Rendering::EnvironmentFlatteningService& environmentFlatteningService,
-                                                                   const Eegeo::Resources::Interiors::InteriorInteractionModel& interiorInteractionModel)
-                : m_defaultLocationService(defaultLocationService)
-                , m_environmentFlatteningService(environmentFlatteningService)
-                , m_interiorInteractionModel(interiorInteractionModel)
-                , m_isAuthorized(false)
-                , m_latLong(Eegeo::Space::LatLong::FromDegrees(0, 0))
-                , m_floorIndex(0)
+                // public api
+                IndoorAtlasLocationService::IndoorAtlasLocationService(
+                        Eegeo::Location::ILocationService& defaultLocationService,
+                        ExampleApp::ExampleAppMessaging::TMessageBus& messageBus,
+                        const Eegeo::Rendering::EnvironmentFlatteningService& environmentFlatteningService,
+                        const Eegeo::Resources::Interiors::InteriorInteractionModel& interiorInteractionModel,
+                        const Eegeo::Resources::Interiors::InteriorSelectionModel& interiorSelectionModel,
+                        const Eegeo::Resources::Interiors::MetaData::InteriorMetaDataRepository& interiorMetaDataRepository)
+                        : m_pImpl(nullptr)
                 {
+                    m_pImpl = Eegeo_NEW(IndoorAtlasLocationServiceImpl)(
+                            defaultLocationService,
+                            messageBus,
+                            environmentFlatteningService,
+                            interiorInteractionModel,
+                            interiorSelectionModel,
+                            interiorMetaDataRepository);
                 }
-                
-                const bool IndoorAtlasLocationService::GetIsAuthorized() const
-                {
-                    return m_isAuthorized;
-                }
-                
-                bool IndoorAtlasLocationService::IsIndoors()
-                {
-                    return true;
-                }
-                
-                Eegeo::Resources::Interiors::InteriorId IndoorAtlasLocationService::GetInteriorId()
-                {
-                    return m_interiorInteractionModel.GetInteriorModel()->GetId();
-                }
-                
-                bool IndoorAtlasLocationService::GetLocation(Eegeo::Space::LatLong& latLong)
-                {
-                    if(std::abs(m_latLong.GetLatitude()) > 0 || std::abs(m_latLong.GetLongitude()) > 0)
-                    {
-                        latLong.SetLatitude(m_latLong.GetLatitude());
-                        latLong.SetLongitude(m_latLong.GetLongitude());
-                    }
-                    else
-                    {
-                        m_defaultLocationService.GetLocation(latLong);
-                    }
 
-                    return true;
-                }
-                
-                bool IndoorAtlasLocationService::GetAltitude(double& altitude)
+                IndoorAtlasLocationService::~IndoorAtlasLocationService()
                 {
-                    const Eegeo::Resources::Interiors::InteriorsModel* interiorModel = m_interiorInteractionModel.GetInteriorModel();
-                    if(interiorModel)
-                    {
-                        altitude = ExampleApp::Helpers::InteriorHeightHelpers::GetFloorHeightAboveSeaLevelIncludingEnvironmentFlattening(*interiorModel,
-                                                                                                                                         m_floorIndex,
-                                                                                                                                         m_environmentFlatteningService.GetCurrentScale());
-                        return true;
-                    }
-                    
-                    return false;
+                    Eegeo_DELETE(m_pImpl);
                 }
-                
-                bool IndoorAtlasLocationService::GetFloorIndex(int& floorIndex)
+
+                // Non-interface methods
+                void IndoorAtlasLocationService::StartUpdating()
                 {
-                    floorIndex = m_floorIndex;
-                    return true;
+                    m_pImpl->StartUpdating();
                 }
-                
-                bool IndoorAtlasLocationService::GetHorizontalAccuracy(double& accuracy)
+
+                void IndoorAtlasLocationService::StopUpdating()
                 {
-                    return false;
+                    m_pImpl->StopUpdating();
                 }
-                
-                bool IndoorAtlasLocationService::GetHeadingDegrees(double& headingDegrees)
+
+                // General
+                void IndoorAtlasLocationService::OnPause()
                 {
-                    return m_defaultLocationService.GetHeadingDegrees(headingDegrees);
+                    m_pImpl->OnPause();
                 }
-                
-                void IndoorAtlasLocationService::StopListening()
+
+                void IndoorAtlasLocationService::OnResume()
                 {
+                    m_pImpl->OnResume();
                 }
-                
-                void IndoorAtlasLocationService::SetIsAuthorized(bool isAuthorized)
+
+                // Location
+                bool IndoorAtlasLocationService::IsLocationAuthorized() const
                 {
-                    m_isAuthorized = isAuthorized;
+                    return m_pImpl->IsLocationAuthorized();
                 }
-                
-                void IndoorAtlasLocationService::SetLocation(Eegeo::Space::LatLong &latLong)
+
+                bool IndoorAtlasLocationService::IsLocationActive() const
                 {
-                    m_latLong = latLong;
+                    return m_pImpl->IsLocationActive();
                 }
-                
-                void IndoorAtlasLocationService::SetFloorIndex(int floorIndex)
+
+                bool IndoorAtlasLocationService::GetLocation(Eegeo::Space::LatLong& latLong) const
                 {
-                    m_floorIndex = floorIndex;
+                    return m_pImpl->GetLocation(latLong);
+                }
+
+                bool IndoorAtlasLocationService::GetAltitude(double& altitude) const
+                {
+                    return m_pImpl->GetAltitude(altitude);
+                }
+
+                bool IndoorAtlasLocationService::GetHorizontalAccuracy(double& accuracy) const
+                {
+                    return m_pImpl->GetHorizontalAccuracy(accuracy);
+                }
+
+                void IndoorAtlasLocationService::StartUpdatingLocation()
+                {
+                    m_pImpl->StartUpdatingLocation();
+                }
+
+                void IndoorAtlasLocationService::StopUpdatingLocation()
+                {
+                    m_pImpl->StopUpdatingLocation();
+                }
+
+                // Heading
+                bool IndoorAtlasLocationService::GetHeadingDegrees(double& headingDegrees) const
+                {
+                    return m_pImpl->GetHeadingDegrees(headingDegrees);
+                }
+
+                bool IndoorAtlasLocationService::IsHeadingAuthorized() const
+                {
+                    return m_pImpl->IsHeadingAuthorized();
+                }
+
+                bool IndoorAtlasLocationService::IsHeadingActive() const
+                {
+                    return m_pImpl->IsHeadingActive();
+                }
+
+                void IndoorAtlasLocationService::StartUpdatingHeading()
+                {
+                    m_pImpl->StartUpdatingHeading();
+                }
+
+                void IndoorAtlasLocationService::StopUpdatingHeading()
+                {
+                    m_pImpl->StopUpdatingHeading();
+                }
+
+                // Indoor
+                bool IndoorAtlasLocationService::IsIndoors() const
+                {
+                    return m_pImpl->IsIndoors();
+                }
+
+                Eegeo::Resources::Interiors::InteriorId IndoorAtlasLocationService::GetInteriorId() const
+                {
+                    return m_pImpl->GetInteriorId();
+                }
+
+                bool IndoorAtlasLocationService::GetFloorIndex(int& floorIndex) const
+                {
+                    return m_pImpl->GetFloorIndex(floorIndex);
+                }
+
+                bool IndoorAtlasLocationService::IsIndoorAuthorized() const
+                {
+                    return m_pImpl->IsIndoorAuthorized();
                 }
             }
         }

@@ -172,7 +172,6 @@ AppHost::AppHost(
                                                                                                                               mapModule.GetEnvironmentFlatteningService(),
                                                                                                                               *m_piOSLocationService,
                                                                                                                               mapModule.GetInteriorMetaDataModule().GetInteriorMetaDataRepository(),
-                                                                                                                              m_iOSAlertBoxFactory,
                                                                                                                               m_messageBus);
     
     m_pSenionLabLocationModule = Eegeo_NEW(ExampleApp::SenionLab::SenionLabLocationModule)(m_pApp->GetAppModeModel(),
@@ -205,7 +204,6 @@ AppHost::AppHost(
     CreateApplicationViewModules(screenProperties);
 
     m_pAppInputDelegate = Eegeo_NEW(AppInputDelegate)(*m_pApp, m_viewController, screenProperties.GetScreenWidth(), screenProperties.GetScreenHeight(), screenProperties.GetPixelScale());
-    m_pAppLocationDelegate = Eegeo_NEW(AppLocationDelegate)(*m_piOSLocationService, m_viewController);
     m_pAppUrlDelegate = Eegeo_NEW(AppUrlDelegate)(*m_pApp);
 
     m_messageBus.SubscribeUi(m_userInteractionEnabledChangedHandler);
@@ -218,9 +216,6 @@ AppHost::~AppHost()
     Eegeo_DELETE m_pAppUrlDelegate;
     m_pAppUrlDelegate = NULL;
    
-    Eegeo_DELETE m_pAppLocationDelegate;
-    m_pAppLocationDelegate = NULL;
-
     Eegeo_DELETE m_pAppInputDelegate;
     m_pAppInputDelegate = NULL;
 
@@ -278,13 +273,14 @@ AppHost::~AppHost()
 void AppHost::OnResume()
 {
     m_pLinkOutObserver->OnAppResume();
-    
+    m_pCurrentLocationService->OnResume();
     m_pApp->OnResume();
 }
 
 void AppHost::OnPause()
 {
     m_pApp->OnPause();
+    m_pCurrentLocationService->OnPause();
 }
 
 void AppHost::NotifyScreenPropertiesChanged(const Eegeo::Rendering::ScreenProperties& screenProperties)
@@ -294,7 +290,7 @@ void AppHost::NotifyScreenPropertiesChanged(const Eegeo::Rendering::ScreenProper
 
 void AppHost::Update(float dt)
 {
-    if (!m_pAppLocationDelegate->HasReceivedPermissionResponse())
+    if (!m_piOSLocationService->IsLocationAuthorized())
     {
         return;
     }
@@ -552,5 +548,5 @@ void AppHost::HandleUrlOpen(const AppInterface::UrlData &data)
 
 void AppHost::RequestLocationPermission()
 {
-    m_pAppLocationDelegate->RequestPermission();
+    m_piOSLocationService->RequestLocationPermission();
 }

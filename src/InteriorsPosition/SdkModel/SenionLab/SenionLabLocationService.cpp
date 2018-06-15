@@ -1,9 +1,9 @@
 // Copyright eeGeo Ltd (2012-2016), All Rights Reserved
 
 #include "SenionLabLocationService.h"
-#include "InteriorHeightHelpers.h"
 #include "EnvironmentFlatteningService.h"
 #include "InteriorInteractionModel.h"
+#include "SenionLabLocationServiceImpl.h"
 
 namespace ExampleApp
 {
@@ -13,91 +13,133 @@ namespace ExampleApp
         {
             namespace SenionLab
             {
-                SenionLabLocationService::SenionLabLocationService(Eegeo::Location::ILocationService& defaultLocationService,
-                                                                   const Eegeo::Rendering::EnvironmentFlatteningService& environmentFlatteningService,
-                                                                   const Eegeo::Resources::Interiors::InteriorInteractionModel& interiorInteractionModel)
-                : m_defaultLocationService(defaultLocationService)
-                , m_environmentFlatteningService(environmentFlatteningService)
-                , m_interiorInteractionModel(interiorInteractionModel)
-                , m_isAuthorized(false)
-                , m_latLong(Eegeo::Space::LatLong::FromDegrees(0, 0))
-                , m_floorIndex(-1)
+                // public api
+                SenionLabLocationService::SenionLabLocationService(
+                        Eegeo::Location::ILocationService& defaultLocationService,
+                        ExampleApp::ExampleAppMessaging::TMessageBus& messageBus,
+                        const Eegeo::Rendering::EnvironmentFlatteningService& environmentFlatteningService,
+                        const Eegeo::Resources::Interiors::InteriorInteractionModel& interiorInteractionModel,
+                        const Eegeo::Resources::Interiors::InteriorSelectionModel& interiorSelectionModel,
+                        const Eegeo::Resources::Interiors::MetaData::InteriorMetaDataRepository& interiorMetaDataRepository)
+                : m_pImpl(nullptr)
                 {
+                    m_pImpl = Eegeo_NEW(SenionLabLocationServiceImpl)(
+                            defaultLocationService,
+                            messageBus,
+                            environmentFlatteningService,
+                            interiorInteractionModel,
+                            interiorSelectionModel,
+                            interiorMetaDataRepository);
+                }
+
+                SenionLabLocationService::~SenionLabLocationService()
+                {
+                    Eegeo_DELETE(m_pImpl);
+                }
+
+                // Non-interface methods
+                void SenionLabLocationService::StartUpdating()
+                {
+                    m_pImpl->StartUpdating();
+                }
+
+                void SenionLabLocationService::StopUpdating()
+                {
+                    m_pImpl->StopUpdating();
+                }
+
+                // General
+                void SenionLabLocationService::OnPause()
+                {
+                    m_pImpl->OnPause();
                 }
                 
-                const bool SenionLabLocationService::GetIsAuthorized() const
+                void SenionLabLocationService::OnResume()
                 {
-                    return m_isAuthorized;
+                    m_pImpl->OnResume();
                 }
                 
-                bool SenionLabLocationService::IsIndoors()
+                // Location
+                bool SenionLabLocationService::IsLocationAuthorized() const
                 {
-                    return true;
+                    return m_pImpl->IsLocationAuthorized();
                 }
                 
-                Eegeo::Resources::Interiors::InteriorId SenionLabLocationService::GetInteriorId()
+                bool SenionLabLocationService::IsLocationActive() const
                 {
-                    if(m_interiorInteractionModel.HasInteriorModel())
-                    {
-                        return m_interiorInteractionModel.GetInteriorModel()->GetId();
-                    }
-                    else return Eegeo::Resources::Interiors::InteriorId::NullId();
+                    return m_pImpl->IsLocationActive();
                 }
                 
-                bool SenionLabLocationService::GetLocation(Eegeo::Space::LatLong& latLong)
+                bool SenionLabLocationService::GetLocation(Eegeo::Space::LatLong& latLong) const
                 {
-                    latLong.SetLatitude(m_latLong.GetLatitude());
-                    latLong.SetLongitude(m_latLong.GetLongitude());
-                    return true;
+                    return m_pImpl->GetLocation(latLong);
                 }
                 
-                bool SenionLabLocationService::GetAltitude(double& altitude)
+                bool SenionLabLocationService::GetAltitude(double& altitude) const
                 {
-                    const Eegeo::Resources::Interiors::InteriorsModel* interiorModel = m_interiorInteractionModel.GetInteriorModel();
-                    if(interiorModel)
-                    {
-                        altitude = ExampleApp::Helpers::InteriorHeightHelpers::GetFloorHeightAboveSeaLevelIncludingEnvironmentFlattening(*interiorModel,
-                                                                                                                                         m_floorIndex,
-                                                                                                                                         m_environmentFlatteningService.GetCurrentScale());
-                        return true;
-                    }
-                    
-                    return false;
+                    return m_pImpl->GetAltitude(altitude);
                 }
                 
-                bool SenionLabLocationService::GetFloorIndex(int& floorIndex)
+                bool SenionLabLocationService::GetHorizontalAccuracy(double& accuracy) const
                 {
-                    floorIndex = m_floorIndex;
-                    return true;
+                    return m_pImpl->GetHorizontalAccuracy(accuracy);
                 }
                 
-                bool SenionLabLocationService::GetHorizontalAccuracy(double& accuracy)
+                void SenionLabLocationService::StartUpdatingLocation()
                 {
-                    return false;
+                    m_pImpl->StartUpdatingLocation();
                 }
                 
-                bool SenionLabLocationService::GetHeadingDegrees(double& headingDegrees)
+                void SenionLabLocationService::StopUpdatingLocation()
                 {
-                    return m_defaultLocationService.GetHeadingDegrees(headingDegrees);
+                    m_pImpl->StopUpdatingLocation();
                 }
                 
-                void SenionLabLocationService::StopListening()
+                // Heading
+                bool SenionLabLocationService::GetHeadingDegrees(double& headingDegrees) const
                 {
+                    return m_pImpl->GetHeadingDegrees(headingDegrees);
                 }
                 
-                void SenionLabLocationService::SetIsAuthorized(bool isAuthorized)
+                bool SenionLabLocationService::IsHeadingAuthorized() const
                 {
-                    m_isAuthorized = isAuthorized;
+                    return m_pImpl->IsHeadingAuthorized();
                 }
                 
-                void SenionLabLocationService::SetLocation(Eegeo::Space::LatLong &latLong)
+                bool SenionLabLocationService::IsHeadingActive() const
                 {
-                    m_latLong = latLong;
+                    return m_pImpl->IsHeadingActive();
                 }
                 
-                void SenionLabLocationService::SetFloorIndex(int floorIndex)
+                void SenionLabLocationService::StartUpdatingHeading()
                 {
-                    m_floorIndex = floorIndex;
+                    m_pImpl->StartUpdatingHeading();
+                }
+                
+                void SenionLabLocationService::StopUpdatingHeading()
+                {
+                    m_pImpl->StopUpdatingHeading();
+                }
+                
+                // Indoor
+                bool SenionLabLocationService::IsIndoors() const
+                {
+                    return m_pImpl->IsIndoors();
+                }
+                
+                Eegeo::Resources::Interiors::InteriorId SenionLabLocationService::GetInteriorId() const
+                {
+                    return m_pImpl->GetInteriorId();
+                }
+                
+                bool SenionLabLocationService::GetFloorIndex(int& floorIndex) const
+                {
+                    return m_pImpl->GetFloorIndex(floorIndex);
+                }
+                
+                bool SenionLabLocationService::IsIndoorAuthorized() const
+                {
+                    return m_pImpl->IsIndoorAuthorized();
                 }
             }
         }

@@ -14,7 +14,6 @@
 #include "iOSAlertBoxFactory.h"
 #include "NativeUIFactories.h"
 #include "AppInputDelegate.h"
-#include "AppLocationDelegate.h"
 #include "Modules.h"
 #include "MobileExampleApp.h"
 #include "InitialExperience.h"
@@ -57,10 +56,10 @@
 #include "AlwaysActiveUserIdleService.h"
 #include "iOSScreenshotService.h"
 #include "iOSAutomatedScreenshotController.h"
+#include "iOSLocationService.h"
 
 @class ViewController;
 class AppInputDelegate;
-class AppLocationDelegate;
 class AppUrlDelegate;
 
 class AppHost : public Eegeo::IEegeoErrorHandler, protected Eegeo::NonCopyable
@@ -104,7 +103,6 @@ private:
     Eegeo::iOS::iOSLocationService* m_piOSLocationService;
     Eegeo::iOS::iOSConnectivityService* m_piOSConnectivityService;
     AppInputDelegate* m_pAppInputDelegate;
-    AppLocationDelegate* m_pAppLocationDelegate;
     AppUrlDelegate* m_pAppUrlDelegate;
 
     Eegeo::UI::NativeInput::iOS::iOSInputBoxFactory m_iOSInputBoxFactory;
